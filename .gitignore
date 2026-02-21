@@ -1,0 +1,7 @@
+# Güvenlik: API Key ve Gizli Konfigürasyonlar
+src/utils/config.js
+
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
