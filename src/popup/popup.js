@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSettings.querySelector('span').innerText = isVisible ? '▲' : '▼';
     });
 
-    // --- SEKME (TAB) DEĞİŞTİRME MANTIĞI ---
+    
     tabPageBtn.addEventListener('click', () => {
         tabPageBtn.classList.add('active');
         tabTestBtn.classList.remove('active');
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pageCodeEditor.classList.remove('active');
     });
 
-    // --- X BUTONU KESİN ÇÖZÜMÜ ---
+ 
     function deleteStep(index) {
         chrome.storage.local.get(['recordedSteps'], (res) => {
             let steps = res.recordedSteps || [];
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Listeyi oluştururken butona doğrudan tıklama olayı ekliyoruz
+    
     function renderSteps(steps) {
         stepList.innerHTML = ""; 
         if (!steps || steps.length === 0) {
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- VERİLERİ YÜKLE ---
+   
     chrome.storage.local.get(['isRecording', 'recordedSteps', 'lastPageCode', 'lastTestCode', 'basePageCode', 'baseTestCode'], (res) => {
         updateButtonUI(res.isRecording || false);
         renderSteps(res.recordedSteps || []);
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 🧠 AI KOD ÜRETME (FRAMEWORK-AGNOSTIC GÜNCELLEMESİ) ---
+  
     document.getElementById('generateBtn').addEventListener('click', async () => {
         const framework = frameworkSelect.options[frameworkSelect.selectedIndex].text;
         
@@ -149,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
             pageCodeEditor.innerText = `// 🧠 Gemini AI (${framework}) Page kodunu hazırlıyor...`;
             testCodeEditor.innerText = `// 🧠 Gemini AI (${framework}) Test kodunu hazırlıyor...`;
             
-            // PROMPT GÜNCELLENDİ: Selenium'a özgü kelimeler (driver.get, @FindBy, @Test) çıkarıldı, dinamik hale getirildi.
             const prompt = `
             Sen kıdemli bir SDET'sin. Sana verilen adımları KESİNLİKLE "${framework}" framework'ünün kendi sözdizimine (syntax) ve best-practice'lerine uygun olarak yaz.
             

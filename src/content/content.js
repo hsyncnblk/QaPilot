@@ -44,32 +44,26 @@ document.addEventListener("blur", function(event) {
     }
 }, true);
 
-// 5. Gelişmiş Kayıt Fonksiyonu (Kurşun Geçirmez Iframe Destekli)
 function saveStep(actionData) {
     chrome.storage.local.get(['recordedSteps'], (result) => {
         let steps = result.recordedSteps || [];
 
-        // 🚀 GELİŞMİŞ IFRAME DEDEKTÖRÜ (HATA GİDERİLDİ)
         let isInsideIframe = false;
         try {
-            // Eğer kendi penceremiz, en üst pencereye eşit değilse iframe içindeyizdir.
             isInsideIframe = window.self !== window.top;
         } catch (e) {
-            // CORS güvenlik hatası fırlatılırsa, KESİN olarak cross-origin bir iframe içindeyizdir.
             isInsideIframe = true; 
         }
 
-        let finalIframeId = null; // Varsayılan olarak null (Yani Ana Sayfa)
+        let finalIframeId = null; 
 
         if (isInsideIframe) {
             try {
-                // Önce frameElement id'sine bak, yoksa name'ine bak
                 finalIframeId = (window.frameElement && window.frameElement.id) ? window.frameElement.id : window.name;
             } catch (e) {
-                // CORS engeline takılırsak id okuyamayız, pass geçiyoruz
+               
             }
             
-            // Eğer id veya name bulamadıysa (veya boşsa) jenerik ismimiz olan 'active-iframe'i ver
             if (!finalIframeId || finalIframeId.trim() === "") {
                 finalIframeId = "active-iframe";
             }
@@ -77,7 +71,7 @@ function saveStep(actionData) {
 
         const enrichedData = {
             ...actionData,
-            iframeId: finalIframeId, // Doğru ve filtrelenmiş değer atandı
+            iframeId: finalIframeId, 
             timestamp: new Date().getTime()
         };
 
@@ -87,24 +81,21 @@ function saveStep(actionData) {
     });
 }
 
-// 6. Akıllı Seçici Bulma (İyileştirildi)
 function getBestLocator(el) {
     if (el.getAttribute("data-testid")) return `[data-testid="${el.getAttribute("data-testid")}"]`;
     if (el.getAttribute("data-cy")) return `[data-cy="${el.getAttribute("data-cy")}"]`;
     if (el.id) return `#${el.id}`;
     if (el.getAttribute("name")) return `[name="${el.getAttribute("name")}"]`;
     
-    // Klas isimlerini daha temiz yakala (İçinde ':' veya '[' olan karmaşık framework sınıflarını alma)
     if (el.className && typeof el.className === "string") {
         const classes = el.className.trim().split(/\s+/).filter(c => c && !c.includes(':') && !c.includes('['));
         if (classes.length > 0) return `.${classes.join('.')}`;
     }
     
-    // XPath fallback (Eğer üsttekiler yoksa)
     return getXPath(el);
 }
 
-// Yardımcı: XPath Oluşturucu
+
 function getXPath(element) {
     if (!element || element === document.body) return '/html/body';
     if (element.id && element.id !== '') return `//*[@id="${element.id}"]`;
