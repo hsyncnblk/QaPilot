@@ -44,19 +44,40 @@ document.addEventListener("blur", function(event) {
     }
 }, true);
 
-// 5. Gelişmiş Kayıt Fonksiyonu (Iframe Destekli)
+// 5. Gelişmiş Kayıt Fonksiyonu (Kurşun Geçirmez Iframe Destekli)
 function saveStep(actionData) {
     chrome.storage.local.get(['recordedSteps'], (result) => {
         let steps = result.recordedSteps || [];
 
-        // 🚀 Iframe Bilgisini Ekle
-        // Eğer bu script bir iframe içinde çalışıyorsa frame'in ID veya Name'ini alır
-        const iframeId = window.self !== window.top ? 
-            (window.name || window.frameElement?.id || "active-iframe") : null;
+        // 🚀 GELİŞMİŞ IFRAME DEDEKTÖRÜ (HATA GİDERİLDİ)
+        let isInsideIframe = false;
+        try {
+            // Eğer kendi penceremiz, en üst pencereye eşit değilse iframe içindeyizdir.
+            isInsideIframe = window.self !== window.top;
+        } catch (e) {
+            // CORS güvenlik hatası fırlatılırsa, KESİN olarak cross-origin bir iframe içindeyizdir.
+            isInsideIframe = true; 
+        }
+
+        let finalIframeId = null; // Varsayılan olarak null (Yani Ana Sayfa)
+
+        if (isInsideIframe) {
+            try {
+                // Önce frameElement id'sine bak, yoksa name'ine bak
+                finalIframeId = (window.frameElement && window.frameElement.id) ? window.frameElement.id : window.name;
+            } catch (e) {
+                // CORS engeline takılırsak id okuyamayız, pass geçiyoruz
+            }
+            
+            // Eğer id veya name bulamadıysa (veya boşsa) jenerik ismimiz olan 'active-iframe'i ver
+            if (!finalIframeId || finalIframeId.trim() === "") {
+                finalIframeId = "active-iframe";
+            }
+        }
 
         const enrichedData = {
             ...actionData,
-            iframeId: iframeId, // Iframe bilgisi buraya ekleniyor
+            iframeId: finalIframeId, // Doğru ve filtrelenmiş değer atandı
             timestamp: new Date().getTime()
         };
 
@@ -66,17 +87,17 @@ function saveStep(actionData) {
     });
 }
 
-// 6. Akıllı Seçici Bulma
+// 6. Akıllı Seçici Bulma (İyileştirildi)
 function getBestLocator(el) {
     if (el.getAttribute("data-testid")) return `[data-testid="${el.getAttribute("data-testid")}"]`;
     if (el.getAttribute("data-cy")) return `[data-cy="${el.getAttribute("data-cy")}"]`;
     if (el.id) return `#${el.id}`;
     if (el.getAttribute("name")) return `[name="${el.getAttribute("name")}"]`;
     
-    // Klas isimlerini daha temiz yakala
+    // Klas isimlerini daha temiz yakala (İçinde ':' veya '[' olan karmaşık framework sınıflarını alma)
     if (el.className && typeof el.className === "string") {
-        const classes = el.className.trim().split(/\s+/).filter(c => c).join('.');
-        if (classes) return `.${classes}`;
+        const classes = el.className.trim().split(/\s+/).filter(c => c && !c.includes(':') && !c.includes('['));
+        if (classes.length > 0) return `.${classes.join('.')}`;
     }
     
     // XPath fallback (Eğer üsttekiler yoksa)
@@ -85,14 +106,15 @@ function getBestLocator(el) {
 
 // Yardımcı: XPath Oluşturucu
 function getXPath(element) {
-    if (element.id !== '') return `//*[@id="${element.id}"]`;
-    if (element === document.body) return '/html/body';
+    if (!element || element === document.body) return '/html/body';
+    if (element.id && element.id !== '') return `//*[@id="${element.id}"]`;
 
     let ix = 0;
-    let siblings = element.parentNode.childNodes;
+    let siblings = element.parentNode ? element.parentNode.childNodes : [];
     for (let i = 0; i < siblings.length; i++) {
         let sibling = siblings[i];
         if (sibling === element) return getXPath(element.parentNode) + '/' + element.tagName.toLowerCase() + '[' + (ix + 1) + ']';
         if (sibling.nodeType === 1 && sibling.tagName === element.tagName) ix++;
     }
+    return '';
 }

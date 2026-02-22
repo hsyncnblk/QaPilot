@@ -43,18 +43,18 @@ document.addEventListener('DOMContentLoaded', () => {
         pageCodeEditor.classList.remove('active');
     });
 
-    // --- 🚀 X BUTONU KESİN ÇÖZÜMÜ ---
+    // --- X BUTONU KESİN ÇÖZÜMÜ ---
     function deleteStep(index) {
         chrome.storage.local.get(['recordedSteps'], (res) => {
             let steps = res.recordedSteps || [];
             steps.splice(index, 1);
             chrome.storage.local.set({ recordedSteps: steps }, () => {
-                renderSteps(steps); // Silindikten sonra listeyi yenile
+                renderSteps(steps); 
             });
         });
     }
 
-    // Listeyi oluştururken butona doğrudan tıklama olayı (Event) ekliyoruz
+    // Listeyi oluştururken butona doğrudan tıklama olayı ekliyoruz
     function renderSteps(steps) {
         stepList.innerHTML = ""; 
         if (!steps || steps.length === 0) {
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
             li.style.borderBottom = "1px solid #f1f2f6";
             li.style.padding = "4px 0";
 
-            // Sol Kısım (Metin)
+            // Sol Kısım
             const infoDiv = document.createElement('div');
             infoDiv.style.flexGrow = "1";
             infoDiv.style.overflow = "hidden";
@@ -85,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
             delBtn.innerText = "×";
             delBtn.style.cssText = "background:none; border:none; color:#e74c3c; cursor:pointer; font-weight:bold; font-size:18px; padding-left:10px;";
             
-            // X butonuna tıklandığında doğrudan deleteStep çalışacak
             delBtn.addEventListener('click', () => {
                 deleteStep(index);
             });
@@ -139,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 🧠 AI KOD ÜRETME (KATI MİMARİ KURALLARI) ---
+    // --- 🧠 AI KOD ÜRETME (FRAMEWORK-AGNOSTIC GÜNCELLEMESİ) ---
     document.getElementById('generateBtn').addEventListener('click', async () => {
         const framework = frameworkSelect.options[frameworkSelect.selectedIndex].text;
         
@@ -147,21 +146,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const steps = res.recordedSteps || [];
             if (steps.length === 0) return;
 
-            pageCodeEditor.innerText = `// 🧠 Gemini AI Page kodunu hazırlıyor...`;
-            testCodeEditor.innerText = `// 🧠 Gemini AI Test kodunu hazırlıyor...`;
+            pageCodeEditor.innerText = `// 🧠 Gemini AI (${framework}) Page kodunu hazırlıyor...`;
+            testCodeEditor.innerText = `// 🧠 Gemini AI (${framework}) Test kodunu hazırlıyor...`;
             
+            // PROMPT GÜNCELLENDİ: Selenium'a özgü kelimeler (driver.get, @FindBy, @Test) çıkarıldı, dinamik hale getirildi.
             const prompt = `
-            Sen kıdemli bir SDET'sin. Adımları "${framework}" formatına çevir.
+            Sen kıdemli bir SDET'sin. Sana verilen adımları KESİNLİKLE "${framework}" framework'ünün kendi sözdizimine (syntax) ve best-practice'lerine uygun olarak yaz.
             
             KATI MİMARİ KURALLAR (POM - Action Based):
             1. PAGE CLASS: 
-               - BasePage'den türet. Web elementleri (@FindBy) ve tekil eylem metodlarını (click, sendKeys vb.) oluştur.
-               - EN ÖNEMLİSİ: Tüm bu tekil adımları sırasıyla çalıştıran ve en sonunda DOĞRULAMA (Assert) işlemini yapan GİZLEYİCİ/KAPSAYICI (Facade) bir ana metod yaz (Örn: public void executeWorkflowAndVerify() { ... }). 
-               - Doğrulama (Assert) KESİNLİKLE bu Page sınıfının içindeki metodda olmalıdır!
+               - Seçilen framework'ün standartlarına göre Page sınıfını oluştur (Eğer BasePage verilmişse ondan türet).
+               - Element tanımlamalarını seçilen framework'e uygun yap (Örn: Selenium ise @FindBy, Playwright ise page.locator() vb.).
+               - EN ÖNEMLİSİ: Tüm adımları çalıştıran ve en sonunda DOĞRULAMA (Assert) işlemini yapan tek bir ana "İş Akışı" metodu yaz (Örn: completeWorkflowAndVerify() ). Doğrulama (Assert) KESİNLİKLE bu sınıfın içinde olmalıdır!
             2. TEST CLASS: 
-               - BaseTest'ten türeyen bir @Test sınıfı üret.
-               - TEST SINIFI SADECE YÖNETİCİDİR. Test metodunun içinde KESİNLİKLE click(), sendKeys(), getText() veya Assert() KULLANILAMAZ!
-               - Test metodu sadece şunları yapmalıdır: İlgili sayfaya git (driver.get), Page objesini oluştur ve Page sınıfındaki o ana metodu (executeWorkflowAndVerify) çağır.
+               - Seçilen framework'ün Test koşucusuna (Test Runner) uygun bir test sınıfı üret (Eğer BaseTest verilmişse ondan türet).
+               - TEST SINIFI SADECE YÖNETİCİDİR. Test metodunun içinde element seviyesi eylemler (click, fill, sendKeys, getText, Assert vb.) KESİNLİKLE KULLANILAMAZ!
+               - Sadece ilgili sayfaya git, Page objesini oluştur ve Page sınıfındaki o ana metodu (completeWorkflowAndVerify) çağır.
             3. ÇIKTI FORMATI: Mutlaka aşağıdaki etiketleri kullanarak kodları ikiye böl. Açıklama yapma:
             <page>
             // Page Class kodları buraya
