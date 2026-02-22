@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "QA-Pilot: AI Test Assistant",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Records manual test steps and generates automation code via AI.",
   "icons": {
     "16": "assets/icon16.png",
@@ -9,7 +9,12 @@
     "128": "assets/icon128.png"
   },
   "action": {
-    "default_popup": "src/popup/popup.html"
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
   },
   "permissions": [
     "activeTab",
@@ -19,7 +24,9 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/content/content.js"]
+      "js": ["src/content/content.js"],
+      "all_frames": true,
+      "run_at": "document_start"
     }
   ],
   "background": {
