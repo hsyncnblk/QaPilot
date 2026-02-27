@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSettings.querySelector('span').innerText = isVisible ? '▲' : '▼';
     });
 
-    
     tabPageBtn.addEventListener('click', () => {
         tabPageBtn.classList.add('active');
         tabTestBtn.classList.remove('active');
@@ -43,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
         pageCodeEditor.classList.remove('active');
     });
 
- 
     function deleteStep(index) {
         chrome.storage.local.get(['recordedSteps'], (res) => {
             let steps = res.recordedSteps || [];
@@ -54,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    
     function renderSteps(steps) {
         stepList.innerHTML = ""; 
         if (!steps || steps.length === 0) {
@@ -75,10 +72,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const infoDiv = document.createElement('div');
             infoDiv.style.flexGrow = "1";
             infoDiv.style.overflow = "hidden";
-            const actionIcon = step.action === "click" ? "🖱️" : "⌨️";
-            const iframeTag = step.iframeId ? `<small style="color:#f39c12;">[Ifr: ${step.iframeId}]</small> ` : '';
+            
+            // Aksiyon İkonları
+            let actionIcon = "🖱️";
+            if (step.action === "sendKeys") actionIcon = "⌨️";
+            if (step.action === "selectOption") actionIcon = "🔽";
+            if (step.action === "pressKey") actionIcon = "↩️";
+            if (step.action === "assertText") actionIcon = "✅"; 
+
+            const iframeTag = step.iframeId && step.iframeId !== "null" ? `<small style="color:#f39c12;">[Ifr: ${step.iframeId}]</small> ` : '';
             const shortText = step.text ? ` -> "<i>${step.text.substring(0,15)}</i>"` : '';
-            infoDiv.innerHTML = `<strong>${index + 1}:</strong> ${actionIcon} ${iframeTag}<code>${step.locator}</code>${shortText}`;
+            
+            let displayLocator = "";
+            if (step.locator) {
+                displayLocator = step.locator.length > 30 ? step.locator.substring(0, 30) + "..." : step.locator;
+            } else {
+                displayLocator = "Locator Yok"; 
+            }
+            
+            infoDiv.innerHTML = `<strong>${index + 1}:</strong> ${actionIcon} ${iframeTag}<code>${displayLocator}</code>${shortText}`;
 
             // Sağ Kısım (X Butonu)
             const delBtn = document.createElement('button');
@@ -95,7 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-   
     chrome.storage.local.get(['isRecording', 'recordedSteps', 'lastPageCode', 'lastTestCode', 'basePageCode', 'baseTestCode'], (res) => {
         updateButtonUI(res.isRecording || false);
         renderSteps(res.recordedSteps || []);
@@ -138,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-  
     document.getElementById('generateBtn').addEventListener('click', async () => {
         const framework = frameworkSelect.options[frameworkSelect.selectedIndex].text;
         
@@ -149,19 +159,52 @@ document.addEventListener('DOMContentLoaded', () => {
             pageCodeEditor.innerText = `// 🧠 Gemini AI (${framework}) Page kodunu hazırlıyor...`;
             testCodeEditor.innerText = `// 🧠 Gemini AI (${framework}) Test kodunu hazırlıyor...`;
             
+            // YENİ PROMPT: Loglama (Element İsimlendirme) özelliği eklendi!
             const prompt = `
             Sen kıdemli bir SDET'sin. Sana verilen adımları KESİNLİKLE "${framework}" framework'ünün kendi sözdizimine (syntax) ve best-practice'lerine uygun olarak yaz.
             
             KATI MİMARİ KURALLAR (POM - Action Based):
-            1. PAGE CLASS: 
-               - Seçilen framework'ün standartlarına göre Page sınıfını oluştur (Eğer BasePage verilmişse ondan türet).
-               - Element tanımlamalarını seçilen framework'e uygun yap (Örn: Selenium ise @FindBy, Playwright ise page.locator() vb.).
-               - EN ÖNEMLİSİ: Tüm adımları çalıştıran ve en sonunda DOĞRULAMA (Assert) işlemini yapan tek bir ana "İş Akışı" metodu yaz (Örn: completeWorkflowAndVerify() ). Doğrulama (Assert) KESİNLİKLE bu sınıfın içinde olmalıdır!
-            2. TEST CLASS: 
-               - Seçilen framework'ün Test koşucusuna (Test Runner) uygun bir test sınıfı üret (Eğer BaseTest verilmişse ondan türet).
-               - TEST SINIFI SADECE YÖNETİCİDİR. Test metodunun içinde element seviyesi eylemler (click, fill, sendKeys, getText, Assert vb.) KESİNLİKLE KULLANILAMAZ!
-               - Sadece ilgili sayfaya git, Page objesini oluştur ve Page sınıfındaki o ana metodu (completeWorkflowAndVerify) çağır.
-            3. ÇIKTI FORMATI: Mutlaka aşağıdaki etiketleri kullanarak kodları ikiye böl. Açıklama yapma:
+            1. ELEMENT TANIMLAMA (HAYATİ ÖNEMDE): 
+               - Tüm elementleri KESİNLİKLE sınıfın en üstünde, seçilen framework'e uygun olarak tanımla (Örn: Selenium için @FindBy, Playwright için sayfa başında locator).
+               - YASAK: Sınıf içinde 'driver.findElement()' kullanan veya element bulan yardımcı metodlar (örn: findElementByXPath) KESİNLİKLE YAZMAYACAKSIN!
+            2. KESİN TEK METOD KURALI: 
+               - Page sınıfı içinde tüm adımları çalıştıran tek bir ana metod oluşturacaksın.
+               - YASAK: Her element için ayrı ayrı gibi metodlar OLUŞTURMAYACAKSIN. Etkileşimler doğrudan oluşturduğun tek metod içinde olacak.
+            3. DİNAMİK BASE CLASS ADAPTASYONU VE LOGLAMA (YENİ KURAL): 
+               - Sana gönderilen varsa 'BASE PAGE' kodundaki özel metodları kullan.
+               - DİKKAT: Bu metodlar loglama ve raporlama (Allure, Extent vb.) için fazladan bir parametre alıyorsa, ORAYA 'null' YAZMA!
+               - Adımlardaki 'text', 'tag' veya HTML içeriğini analiz ederek o elementin ne olduğunu anlatan KISA ve TÜRKÇE BİR İSİM üret ve o parametreye gönder. (Örn: "Araba Sat Butonu", "Plaka Giriş Alanı", "Yıl Seçimi").
+            4. LOCATOR STRATEJİSİ: 
+               - Sana her adım için 'locator' ve 'htmlContext' gönderiyorum. Absolute XPath KESİNLİKLE KULLANMA.
+               - 'htmlContext' verisine bakarak EN STABİL, EN BENZERSİZ locator'ı (id, data-*, name, benzersiz class/XPath) SEN OLUŞTUR.
+                Bir element için locator seçerken şu sırayı takip et:
+                a) Varsa benzersiz ID (Örn: @FindBy(id = "login-button"))
+                b) Varsa Test ID'leri (data-testid, data-qa, data-cy vb.)
+                c) Varsa benzersiz Name veya Placeholder.
+                d) Eğer yukarıdakiler yoksa, METİN içeren XPath (Örn: //button[contains(text(),'Kaydet')]).
+                e) ASLA ama ASLA '__next' veya 'div/div/div' gibi kırılgan, uzun ve mutlak (absolute) yolları kullanma. 
+                f) Eğer element bir ikon ise, yanındaki metni veya 'title'/'aria-label' niteliğini kullan.
+
+            5. TEST CLASS & DOĞRULAMA (ASSERTION): 
+               - EĞER adımların içinde 'assertText' action'ı varsa, bunu Page sınıfındaki  metodunun sonuna ekle (örn: Assert.assertEquals).
+
+            ÖRNEK BEKLENEN PAGE CLASS YAPISI (BUNU BAZ AL):
+            public class OrnekPage extends BasePage {
+                @FindBy(id = "username") private WebElement usernameInput;
+                @FindBy(xpath = "//button[text()='Login']") private WebElement loginBtn;
+                
+                public OrnekPage(WebDriver driver) { super(driver); }
+                
+                public void executeWorkflow() {
+                    
+                    sendText(usernameInput, "testuser", "Kullanıcı Adı Alanı");
+                    // Eğer assertText adımı buradaysa, tam sırasına koy:
+        Assert.assertEquals(welcomeMsg.getText(), "Hoşgeldin", "Giriş mesajı hatalı!"
+                    clickElement(loginBtn, "Giriş Yap Butonu");
+                }
+            }
+            
+            ÇIKTI FORMATI: Mutlaka aşağıdaki etiketleri kullanarak kodları ikiye böl. Açıklama yapma:
             <page>
             // Page Class kodları buraya
             </page>

@@ -12,6 +12,14 @@ chrome.storage.onChanged.addListener((changes) => {
     }
 });
 
+// Helper: Elementin HTML yapısını Gemini için sınırlandırarak al
+function getHtmlContext(el) {
+    if (!el || !el.outerHTML) return "";
+    let html = el.outerHTML;
+    // Token tasarrufu ve performans için HTML'i kesiyoruz
+    return html.length > 300 ? html.substring(0, 300) + "...>" : html;
+}
+
 // 3. Tıklamaları Yakala
 document.addEventListener("click", function(event) {
     if (!isRecording) return; 
@@ -22,7 +30,8 @@ document.addEventListener("click", function(event) {
         action: "click",
         locator: getBestLocator(element),
         tag: element.tagName.toLowerCase(),
-        text: element.innerText ? element.innerText.substring(0, 50).trim() : ""
+        text: element.innerText ? element.innerText.substring(0, 50).trim() : "",
+        htmlContext: getHtmlContext(element)
     });
 }, true);
 
@@ -39,10 +48,79 @@ document.addEventListener("blur", function(event) {
             action: "sendKeys",
             locator: getBestLocator(element),
             tag: element.tagName.toLowerCase(),
-            text: value.substring(0, 100) 
+            text: value.substring(0, 100),
+            htmlContext: getHtmlContext(element)
         });
     }
 }, true);
+
+// 5. Dropdown (Select) Seçimlerini Yakala
+document.addEventListener("change", function(event) {
+    if (!isRecording) return;
+
+    const element = event.target;
+    if (element.tagName === 'SELECT') {
+        const selectedText = element.options[element.selectedIndex] ? element.options[element.selectedIndex].text : "";
+        saveStep({
+            action: "selectOption",
+            locator: getBestLocator(element),
+            tag: "select",
+            text: selectedText.substring(0, 50),
+            value: element.value,
+            htmlContext: getHtmlContext(element)
+        });
+    }
+}, true);
+
+// 6. Kritik Klavye Tuşlarını Yakala (Enter vb.)
+document.addEventListener("keydown", function(event) {
+    if (!isRecording) return;
+
+    if (event.key === "Enter") {
+        const element = event.target;
+        saveStep({
+            action: "pressKey",
+            locator: getBestLocator(element),
+            tag: element.tagName.toLowerCase(),
+            text: "Enter",
+            htmlContext: getHtmlContext(element)
+        });
+    }
+}, true);
+
+// --- YENİ: SAĞ TIK ASSERTION YÖNETİMİ ---
+let lastRightClickedElement = null;
+
+// Sağ tıklanan elementi takip et
+document.addEventListener("contextmenu", function(event) {
+    if (!isRecording) return;
+    lastRightClickedElement = event.target;
+}, true);
+
+// Background script'ten gelen Assertion mesajını dinle
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "assert_element" && lastRightClickedElement && isRecording) {
+        
+        const textToAssert = lastRightClickedElement.innerText ? 
+                             lastRightClickedElement.innerText.trim() : 
+                             lastRightClickedElement.value;
+        
+        if (textToAssert) {
+            saveStep({
+                action: "assertText",
+                locator: getBestLocator(lastRightClickedElement),
+                tag: lastRightClickedElement.tagName.toLowerCase(),
+                text: textToAssert.substring(0, 100),
+                htmlContext: getHtmlContext(lastRightClickedElement)
+            });
+            
+            // Görsel geri bildirim (Yeşil parlama)
+            let originalOutline = lastRightClickedElement.style.outline;
+            lastRightClickedElement.style.outline = "3px solid #27ae60";
+            setTimeout(() => { lastRightClickedElement.style.outline = originalOutline; }, 1000);
+        }
+    }
+});
 
 function saveStep(actionData) {
     chrome.storage.local.get(['recordedSteps'], (result) => {
@@ -60,9 +138,7 @@ function saveStep(actionData) {
         if (isInsideIframe) {
             try {
                 finalIframeId = (window.frameElement && window.frameElement.id) ? window.frameElement.id : window.name;
-            } catch (e) {
-               
-            }
+            } catch (e) { }
             
             if (!finalIframeId || finalIframeId.trim() === "") {
                 finalIframeId = "active-iframe";
@@ -94,7 +170,6 @@ function getBestLocator(el) {
     
     return getXPath(el);
 }
-
 
 function getXPath(element) {
     if (!element || element === document.body) return '/html/body';
