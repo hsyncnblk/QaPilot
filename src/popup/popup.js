@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
             2. KESİN TEK METOD KURALI: 
                - Page sınıfı içinde tüm adımları çalıştıran tek bir ana metod oluşturacaksın.
                - YASAK: Her element için ayrı ayrı gibi metodlar OLUŞTURMAYACAKSIN. Etkileşimler doğrudan oluşturduğun tek metod içinde olacak.
-            3. DİNAMİK BASE CLASS ADAPTASYONU VE LOGLAMA (YENİ KURAL): 
+            3. DİNAMİK BASE CLASS ADAPTASYONU VE LOGLAMA: 
                - Sana gönderilen varsa 'BASE PAGE' kodundaki özel metodları kullan.
                - DİKKAT: Bu metodlar loglama ve raporlama (Allure, Extent vb.) için fazladan bir parametre alıyorsa, ORAYA 'null' YAZMA!
                - Adımlardaki 'text', 'tag' veya HTML içeriğini analiz ederek o elementin ne olduğunu anlatan KISA ve TÜRKÇE BİR İSİM üret ve o parametreye gönder. (Örn: "Araba Sat Butonu", "Plaka Giriş Alanı", "Yıl Seçimi").
@@ -186,10 +186,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 f) Eğer element bir ikon ise, yanındaki metni veya 'title'/'aria-label' niteliğini kullan.
 
             5. TEST CLASS & DOĞRULAMA (ASSERTION): 
-               - EĞER adımların içinde 'assertText' action'ı varsa, bunu Page sınıfındaki  metodunun sonuna ekle (örn: Assert.assertEquals).
+               - EĞER adımların içinde 'assertText' action'ı varsa, bunu Page sınıfındaki metodunun sonuna ekle (örn: Assert.assertEquals).
+
+            6. TEKRARI ÖNLEME (ÇOK ÖNEMLİ): 
+               - Base class metodları 'duration', 'timeout' gibi sürekli aynı değeri (örneğin 10) alan parametrelere ihtiyaç duyuyorsa, bu değeri her satırda KESİNLİKLE tekrar tekrar yazma! Sınıfın en üstüne global bir değişken/sabit tanımla (örn: 'private final int DEFAULT_TIMEOUT = 10;' veya 'const TIMEOUT = 10;').
+               - DİKKAT: BU DEĞİŞKENİ KESİNLİKLE AŞAĞIDAKİ METOTLARIN İÇİNDE KULLAN (Örn: clickElement(btn, DEFAULT_TIMEOUT, "Buton")). Sadece tanımlayıp bırakma!
+
+            7. HELPER YAZMA YASAĞI (HAYATİ KURAL):
+               - Page sınıfının içine KESİNLİKLE 'clickElement', 'sendKeys', 'switchToContext' gibi yardımcı (helper) metotlar YAZMA! 
+               - Bu metotların zaten extends edilen BasePage sınıfında var olduğunu KABUL ET ve ana metodun içinde direkt olarak çağır.
 
             ÖRNEK BEKLENEN PAGE CLASS YAPISI (BUNU BAZ AL):
             public class OrnekPage extends BasePage {
+                
+                private final int DEFAULT_TIMEOUT = 10;
+                
                 @FindBy(id = "username") private WebElement usernameInput;
                 @FindBy(xpath = "//button[text()='Login']") private WebElement loginBtn;
                 
@@ -197,10 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 public void executeWorkflow() {
                     
-                    sendText(usernameInput, "testuser", "Kullanıcı Adı Alanı");
+                    sendText(usernameInput, "testuser", DEFAULT_TIMEOUT, "Kullanıcı Adı Alanı");
                     // Eğer assertText adımı buradaysa, tam sırasına koy:
-        Assert.assertEquals(welcomeMsg.getText(), "Hoşgeldin", "Giriş mesajı hatalı!"
-                    clickElement(loginBtn, "Giriş Yap Butonu");
+                    Assert.assertEquals(welcomeMsg.getText(), "Hoşgeldin", "Giriş mesajı hatalı!");
+                    clickElement(loginBtn, DEFAULT_TIMEOUT, "Giriş Yap Butonu");
                 }
             }
             
@@ -216,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
             BASE TEST: ${res.baseTestCode || "Yok"}
             ADIMLAR: ${JSON.stringify(steps, null, 2)}
             `;
+        
 
             try {
                 const model = "gemini-2.5-flash-lite"; 

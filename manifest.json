@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "QA-Pilot: AI Test Assistant",
-  "version": "1.4",
+  "version": "1.7",
   "description": "Records manual test steps and generates automation code via AI.",
   "icons": {
     "16": "assets/icon16.png",
