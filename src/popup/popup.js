@@ -160,62 +160,39 @@ document.addEventListener('DOMContentLoaded', () => {
             testCodeEditor.innerText = `// 🧠 Gemini AI (${framework}) Test kodunu hazırlıyor...`;
             
             // YENİ PROMPT: Loglama (Element İsimlendirme) özelliği eklendi!
+            
             const prompt = `
             Sen kıdemli bir SDET'sin. Sana verilen adımları KESİNLİKLE "${framework}" framework'ünün kendi sözdizimine (syntax) ve best-practice'lerine uygun olarak yaz.
             
             KATI MİMARİ KURALLAR (POM - Action Based):
-            1. ELEMENT TANIMLAMA (HAYATİ ÖNEMDE): 
-               - Tüm elementleri KESİNLİKLE sınıfın en üstünde, seçilen framework'e uygun olarak tanımla (Örn: Selenium için @FindBy, Playwright için sayfa başında locator).
-               - YASAK: Sınıf içinde 'driver.findElement()' kullanan veya element bulan yardımcı metodlar (örn: findElementByXPath) KESİNLİKLE YAZMAYACAKSIN!
-            2. KESİN TEK METOD KURALI: 
-               - Page sınıfı içinde tüm adımları çalıştıran tek bir ana metod oluşturacaksın.
-               - YASAK: Her element için ayrı ayrı gibi metodlar OLUŞTURMAYACAKSIN. Etkileşimler doğrudan oluşturduğun tek metod içinde olacak.
-            3. DİNAMİK BASE CLASS ADAPTASYONU VE LOGLAMA: 
-               - Sana gönderilen varsa 'BASE PAGE' kodundaki özel metodları kullan.
-               - DİKKAT: Bu metodlar loglama ve raporlama (Allure, Extent vb.) için fazladan bir parametre alıyorsa, ORAYA 'null' YAZMA!
-               - Adımlardaki 'text', 'tag' veya HTML içeriğini analiz ederek o elementin ne olduğunu anlatan KISA ve TÜRKÇE BİR İSİM üret ve o parametreye gönder. (Örn: "Araba Sat Butonu", "Plaka Giriş Alanı", "Yıl Seçimi").
-            4. LOCATOR STRATEJİSİ: 
-               - Sana her adım için 'locator' ve 'htmlContext' gönderiyorum. Absolute XPath KESİNLİKLE KULLANMA.
-               - 'htmlContext' verisine bakarak EN STABİL, EN BENZERSİZ locator'ı (id, data-*, name, benzersiz class/XPath) SEN OLUŞTUR.
-                Bir element için locator seçerken şu sırayı takip et:
-                a) Varsa benzersiz ID (Örn: @FindBy(id = "login-button"))
-                b) Varsa Test ID'leri (data-testid, data-qa, data-cy vb.)
-                c) Varsa benzersiz Name veya Placeholder.
-                d) Eğer yukarıdakiler yoksa, METİN içeren XPath (Örn: //button[contains(text(),'Kaydet')]).
-                e) ASLA ama ASLA '__next' veya 'div/div/div' gibi kırılgan, uzun ve mutlak (absolute) yolları kullanma. 
-                f) Eğer element bir ikon ise, yanındaki metni veya 'title'/'aria-label' niteliğini kullan.
-
-            5. TEST CLASS & DOĞRULAMA (ASSERTION): 
-               - EĞER adımların içinde 'assertText' action'ı varsa, bunu Page sınıfındaki metodunun sonuna ekle (örn: Assert.assertEquals).
-
-            6. TEKRARI ÖNLEME (ÇOK ÖNEMLİ): 
-               - Base class metodları 'duration', 'timeout' gibi sürekli aynı değeri (örneğin 10) alan parametrelere ihtiyaç duyuyorsa, bu değeri her satırda KESİNLİKLE tekrar tekrar yazma! Sınıfın en üstüne global bir değişken/sabit tanımla (örn: 'private final int DEFAULT_TIMEOUT = 10;' veya 'const TIMEOUT = 10;').
-               - DİKKAT: BU DEĞİŞKENİ KESİNLİKLE AŞAĞIDAKİ METOTLARIN İÇİNDE KULLAN (Örn: clickElement(btn, DEFAULT_TIMEOUT, "Buton")). Sadece tanımlayıp bırakma!
-
-            7. HELPER YAZMA YASAĞI (HAYATİ KURAL):
-               - Page sınıfının içine KESİNLİKLE 'clickElement', 'sendKeys', 'switchToContext' gibi yardımcı (helper) metotlar YAZMA! 
-               - Bu metotların zaten extends edilen BasePage sınıfında var olduğunu KABUL ET ve ana metodun içinde direkt olarak çağır.
-
-            ÖRNEK BEKLENEN PAGE CLASS YAPISI (BUNU BAZ AL):
-            public class OrnekPage extends BasePage {
-                
-                private final int DEFAULT_TIMEOUT = 10;
-                
-                @FindBy(id = "username") private WebElement usernameInput;
-                @FindBy(xpath = "//button[text()='Login']") private WebElement loginBtn;
-                
-                public OrnekPage(WebDriver driver) { super(driver); }
-                
-                public void executeWorkflow() {
-                    
-                    sendText(usernameInput, "testuser", DEFAULT_TIMEOUT, "Kullanıcı Adı Alanı");
-                    // Eğer assertText adımı buradaysa, tam sırasına koy:
-                    Assert.assertEquals(welcomeMsg.getText(), "Hoşgeldin", "Giriş mesajı hatalı!");
-                    clickElement(loginBtn, DEFAULT_TIMEOUT, "Giriş Yap Butonu");
-                }
-            }
+            1. ELEMENT TANIMLAMA: 
+               - Tüm elementleri KESİNLİKLE sınıfın en üstünde, seçilen framework'e uygun olarak tanımla (Örn: Selenium için @FindBy).
+               - YASAK: Sınıf içinde 'driver.findElement()' kullanan yardımcı metodlar KESİNLİKLE YAZMAYACAKSIN!
             
-            ÇIKTI FORMATI: Mutlaka aşağıdaki etiketleri kullanarak kodları ikiye böl. Açıklama yapma:
+            2. IFRAME YÖNETİMİ (HAYATİ KURAL):
+               - Sana gönderilen JSON içindeki her bir adımı kontrol et. Eğer adımda 'iframeId' değeri doluysa (null veya undefined değilse), o elementle etkileşime girmeden önce KESİNLİKLE o iframe'e geçiş kodunu yaz.
+               - Eğer 'BASE PAGE' içinde senin için verilmiş bir iframe geçiş metodu varsa ÖNCELİKLE ONU KULLAN. Yoksa framework'ün standart geçiş metodunu kullan (Örn: driver.switchTo().frame(...)).
+               - İşlem bittiğinde veya 'iframeId'si olmayan bir sonrakine geçildiğinde ana sayfaya dönme kodunu ekle (Örn: driver.switchTo().defaultContent()).
+
+            3. LOCATOR STRATEJİSİ (ÇOK ÖNEMLİ): 
+               - Sana her adım için 'locator' ve 'htmlContext' gönderiyorum.
+               - BİRİNCİL KURAL: UZANTININ GÖNDERDİĞİ 'locator' DEĞERİNİ KULLAN. Çünkü bu locator gerçek tarayıcıda DOM üzerinde benzersizlik (isUnique) testinden geçmiştir!
+               - Sadece eğer gönderilen 'locator' çok anlamsız ve aşırı uzun bir CSS yolu ise, 'htmlContext' yardımıyla daha temiz bir locator oluştur.
+               - YASAK: '//mat-icon[text()="search"]', '//span[text()="Kaydet"]' gibi sadece text içeren jenerik tag'ler genelde sayfada BİRDEN FAZLA bulunur. Kendin locator üreteceksen parent elementleri veya data-* attribute'larını kullanarak BENZERSİZ olduğundan emin ol! Absolute XPath ASLA kullanma.
+
+            4. KESİN TEK METOD KURALI: 
+               - Page sınıfı içinde tüm adımları çalıştıran tek bir ana metod oluşturacaksın. Etkileşimler doğrudan bu metod içinde olacak.
+
+            5. DİNAMİK BASE CLASS ADAPTASYONU VE LOGLAMA: 
+               - 'BASE PAGE' kodundaki özel metodları kullan. Bu metodlar loglama için parametre istiyorsa 'null' YAZMA. Adımlardaki 'text', 'tag' verisine bakarak o element için KISA ve TÜRKÇE BİR İSİM üret ve o parametreye gönder (Örn: "Arama İkonu", "Giriş Butonu").
+
+            6. TEKRARI ÖNLEME: 
+               - Base class metodları 'duration', 'timeout' gibi sürekli aynı değeri alan parametrelere ihtiyaç duyuyorsa, sınıfın en üstüne global bir sabit tanımla (örn: 'private final int DEFAULT_TIMEOUT = 10;') ve metotlarda bu sabiti kullan.
+
+            7. HELPER YAZMA YASAĞI:
+               - Page sınıfının içine 'clickElement', 'sendKeys' gibi yardımcı metotlar YAZMA! Bunların BasePage sınıfında var olduğunu KABUL ET.
+
+            ÇIKTI FORMATI: Mutlaka aşağıdaki etiketleri kullanarak kodları ikiye böl. Başka hiçbir açıklama yapma:
             <page>
             // Page Class kodları buraya
             </page>
